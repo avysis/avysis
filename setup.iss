@@ -56,4 +56,4 @@ Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; \
 Filename: "{app}\islandbg.exe";
 
 [UninstallRun]
-Filename: "taskkill.exe"; Parameters: "/f /im islandbg.exe"
+Filename: "taskkill.exe"; Parameters: "/f /im islandbg.exe"; Flags: nowait
