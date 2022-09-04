@@ -16,8 +16,7 @@ while ($true) {
                     $actualBasename = (Get-Item $_).Basename
                     $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?",$_,4,48)
                     if ($msgbox -eq 6) {
-                        get-process $actualBasename | stop-process
-                        start-process powershell.exe -ArgumentList "del '$_' -Force" -Verb RunAs
+                        start-process powershell.exe -ArgumentList "get-process $actualBasename | stop-process; del '$_' -Force" -Verb RunAs
                     }
                 } 
         }
