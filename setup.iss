@@ -22,7 +22,6 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
-CloseApplications=yes
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile={#SourcePath}\LICENSE.txt
@@ -53,3 +52,8 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; \
     ValueType: string; ValueName: "{#MyAppName}"; \
     ValueData: """{app}\{#BgExeName}"""
+    
+[UninstallRun]
+
+
+Filename: "taskkill.exe"; Parameters: "/f /im islandbg.exe"
