@@ -24,10 +24,10 @@ ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
-LicenseFile=C:\Users\Charles\Desktop\island\LICENSE.txt
+LicenseFile={#SourcePath}\LICENSE.txt
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
-OutputDir=C:\Users\Charles\Desktop\island
+OutputDir={#SourcePath}
 OutputBaseFilename=IslandSetup
 Compression=lzma
 SolidCompression=yes
