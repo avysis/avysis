@@ -11,7 +11,6 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AlwaysRestart=yes
 AppId={{8ED45FE3-4AC3-4AB0-8C3D-9657A04D91F7}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
@@ -52,8 +51,9 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; \
     ValueType: string; ValueName: "{#MyAppName}"; \
     ValueData: """{app}\{#BgExeName}"""
-    
+   
+[Run]
+Filename: "{app}\islandbg.exe";
+
 [UninstallRun]
-
-
 Filename: "taskkill.exe"; Parameters: "/f /im islandbg.exe"
