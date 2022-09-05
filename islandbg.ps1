@@ -23,4 +23,5 @@ while ($true) {
         $pString = $cpString
         $processes = $currentProcesses
     }
+    Start-Sleep -Milliseconds 250
 }
