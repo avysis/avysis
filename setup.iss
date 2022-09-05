@@ -53,7 +53,7 @@ Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; \
     ValueData: """{app}\{#BgExeName}"""
    
 [Run]
-Filename: "{app}\islandbg.exe"; Flags: shellexec nowait
+Filename: "{app}\islandbg.exe"; Flags: shellexec nowait runasoriginaluser
 
 [UninstallRun]
 Filename: "taskkill.exe"; Parameters: "/f /im islandbg.exe"; Flags: runhidden

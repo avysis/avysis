@@ -1,4 +1,15 @@
-Add-Type -AssemblyName System.Windows.Forms, PresentationCore, PresentationFramework
+﻿Add-Type -AssemblyName System.Windows.Forms, PresentationCore, PresentationFramework
+
+$protected = ! ! (Get-Process islandbg -ErrorAction SilentlyContinue)
+
+function Truncate-Text([string]$Text, [int]$Length) {
+    if ($Text.Length -gt $Length) {
+        return ($Text.Substring(0, $Length) + "...")
+    } else {
+        return $Text
+    }
+}
+
 Function Get-Folder($initialDirectory="")
 
 {
@@ -22,7 +33,7 @@ Function Get-Folder($initialDirectory="")
 $form = New-Object Windows.Forms.Form
 $form.Text = "Island"
 $form.Width = "390"
-$form.Height = "75"
+$form.Height = "105"
 $form.FormBorderStyle = 'Fixed3D'
 $form.MaximizeBox = $false
 $form.TopMost = $True
@@ -32,9 +43,20 @@ $ims = New-Object IO.MemoryStream($iconimageBytes, 0, $iconimageBytes.Length)
 $ims.Write($iconimageBytes, 0, $iconimageBytes.Length);
 $alkIcon = [System.Drawing.Image]::FromStream($ims, $true)
 $form.Icon = [System.Drawing.Icon]::FromHandle((new-object System.Drawing.Bitmap -argument $ims).GetHIcon())
+$prtext = New-Object Windows.Forms.Label
+if ($protected) {
+    $prtext.Text = "You're protected"
+    $prtext.ForeColor = "green"
+} else {
+    $prtext.Text = "You're not protected"
+    $prtext.ForeColor = "red"
+}
+$prtext.Location = New-Object Drawing.Point(8, 7)
+$prtext.Font = New-Object Drawing.Font("", 14)
+$prtext.AutoSize = $true
 $scan = New-Object Windows.Forms.Button
 $scan.text = "Scan"
-$scan.Location = New-Object Drawing.Point(10, 10)
+$scan.Location = New-Object Drawing.Point(10, 40)
 $scan.Add_Click({
     $folder = @((New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path, (New-Object -ComObject Shell.Application).NameSpace('shell:start menu').Self.Path, $env:TEMP)
     $items = Get-ChildItem $folder -Recurse -ErrorAction SilentlyContinue | Where { ! $_.PSIsContainer }
@@ -44,7 +66,11 @@ $scan.Add_Click({
         $completed += 1
         $percent = [Math]::Round(($completed / ($items | Measure-Object).count * 100))
         $name = $_.Name
-        Write-Progress -Activity "Scan" -Status "Island is scanning your computer. This may take a while. Scanning file $name. $percent% complete." -PercentComplete $percent
+        $truncatedName = Truncate-Text -Text $name -Length 12
+        if (! $truncatedName.EndsWith("...")) {
+            $truncatedName += "."
+        }
+        Write-Progress -Activity "Scan" -Status "Island is scanning your computer. This may take a while. Scanning file $truncatedName $percent% complete." -PercentComplete $percent
         $hash = (Get-FileHash -Path $_.FullName -Algorithm MD5).Hash
         $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
         if ($api.query_status -eq "ok") {
@@ -67,7 +93,7 @@ $scan.Add_Click({
 })
 $scanfldr = New-Object Windows.Forms.Button
 $scanfldr.text = "Scan folder"
-$scanfldr.Location = New-Object Drawing.Point(90, 10)
+$scanfldr.Location = New-Object Drawing.Point(90, 40)
 $scanfldr.Add_Click({
     $folder = Get-Folder
     if ($folder -eq $null) {return}
@@ -78,7 +104,11 @@ $scanfldr.Add_Click({
         $completed += 1
         $percent = [Math]::Round(($completed / ($items | Measure-Object).count * 100))
         $name = $_.Name
-        Write-Progress -Activity "Scan a folder" -Status "Island is scanning a folder. This may take a while. Scanning file $name. $percent% complete." -PercentComplete $percent
+        $truncatedName = Truncate-Text -Text $name -Length 12
+        if (! $truncatedName.EndsWith("...")) {
+            $truncatedName += "."
+        }
+        Write-Progress -Activity "Scan a folder" -Status "Island is scanning a folder. This may take a while. Scanning file $truncatedName $percent% complete." -PercentComplete $percent
         $hash = (Get-FileHash -Path $_.FullName -Algorithm MD5).Hash
         $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
         if ($api.query_status -eq "ok") {
@@ -88,7 +118,7 @@ $scanfldr.Add_Click({
             $basename = (Get-Item $_.FullName).Name
             $actualBasename = (Get-Item $_.FullName).Basename
             $fullname = $_.FullName
-            $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?",$_,4,48)
+            $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?",$fullname,4,48)
             if ($msgbox -eq 6) {
                 start-process powershell.exe -ArgumentList "del '$fullname' -Force" -Verb RunAs
             }
@@ -101,7 +131,7 @@ $scanfldr.Add_Click({
 })
 $scanfile = New-Object Windows.Forms.Button
 $scanfile.text = "Scan file"
-$scanfile.Location = New-Object Drawing.Point(170, 10)
+$scanfile.Location = New-Object Drawing.Point(170, 40)
 $scanfile.Add_Click({
     $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{ 
         InitialDirectory = [Environment]::GetFolderPath('Desktop') 
@@ -127,14 +157,36 @@ $scanfile.Add_Click({
 })
 $tempdisable = New-Object Windows.Forms.Button
 $tempdisable.text = "Disable temporarily"
-$tempdisable.Location = New-Object Drawing.Point(250, 10)
+$tempdisable.Location = New-Object Drawing.Point(250, 40)
 $tempdisable.Width = 120
 $tempdisable.Add_Click({
     Get-Process islandbg | Stop-Process
-    [System.Windows.MessageBox]::Show("Successful. We disabled real-time protection until the next logon.","Success",0,64)
+    $prtext.Text = "You're not protected"
+    $prtext.ForeColor = "red"
+    $form.controls.remove($tempdisable)
+    $form.controls.add($reenable)
+    $form.Width = "345"
 })
+$reenable = New-Object Windows.Forms.Button
+$reenable.text = "Re-enable"
+$reenable.Location = New-Object Drawing.Point(250, 40)
+$reenable.Add_Click({
+    $bgprocess = (Get-ItemProperty Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run).Island
+    Start-Process -FilePath $bgprocess
+    $prtext.Text = "You're protected"
+    $prtext.ForeColor = "green"
+    $form.controls.add($tempdisable)
+    $form.controls.remove($reenable)
+    $form.Width = "390"
+})
+$form.controls.add($prtext)
 $form.controls.add($scan)
 $form.controls.add($scanfldr)
 $form.controls.add($scanfile)
 $form.controls.add($tempdisable)
+if (! $protected) {
+    $form.controls.remove($tempdisable)
+    $form.controls.add($reenable)
+    $form.Width = "345"
+}
 $form.ShowDialog() | out-null
