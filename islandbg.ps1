@@ -8,7 +8,7 @@ while ($true) {
         $newProcesses = $currentProcesses | Where-Object {$_ -notin $processes}
         $newProcesses | % {
                 $hash = (Get-FileHash -Path $_ -Algorithm MD5).Hash
-                $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
+                $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash" -ErrorAction SilentlyContinue
                 if ($api.query_status -eq "ok") {
                     $signature = $api.signature
                     if ($signature -eq $null) {$signature = "Malware"}
