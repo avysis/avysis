@@ -1,6 +1,7 @@
 ﻿Add-Type -AssemblyName System.Windows.Forms, PresentationCore, PresentationFramework
 
 $protected = ! ! (Get-Process islandbg -ErrorAction SilentlyContinue)
+$falsePositives = @("D41D8CD98F00B204E9800998ECF8427E")
 
 function Truncate-Text([string]$Text, [int]$Length) {
     if ($Text.Length -gt $Length) {
@@ -72,6 +73,9 @@ $scan.Add_Click({
         }
         Write-Progress -Activity "Scan" -Status "Island is scanning your computer. This may take a while. Scanning file $truncatedName $percent% complete." -PercentComplete $percent
         $hash = (Get-FileHash -Path $_.FullName -Algorithm MD5).Hash
+        if ($falsePositives.Contains($hash)) {
+            return
+        }
         $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
         if ($api.query_status -eq "ok") {
             $has_threat = $true
@@ -110,6 +114,9 @@ $scanfldr.Add_Click({
         }
         Write-Progress -Activity "Scan a folder" -Status "Island is scanning a folder. This may take a while. Scanning file $truncatedName $percent% complete." -PercentComplete $percent
         $hash = (Get-FileHash -Path $_.FullName -Algorithm MD5).Hash
+        if ($falsePositives.Contains($hash)) {
+            return
+        }
         $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
         if ($api.query_status -eq "ok") {
             $has_threat = $true
@@ -140,6 +147,9 @@ $scanfile.Add_Click({
     $null = $FileBrowser.ShowDialog()
     if (!($FileBrowser.FileName)) {return}
     $hash = (Get-FileHash -Path $FileBrowser.FileName -Algorithm MD5).Hash
+    if ($falsePositives.Contains($hash)) {
+        return
+    }
     $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
     if ($api.query_status -eq "ok") {
         $signature = $api.signature

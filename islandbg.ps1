@@ -1,4 +1,7 @@
 Add-Type -AssemblyName PresentationCore, PresentationFramework
+
+$falsePositives = @("D41D8CD98F00B204E9800998ECF8427E")
+
 $processes = Get-Process | Select-Object -ExpandProperty Path
 $pString = $processes | Out-String
 while ($true) {
@@ -8,6 +11,9 @@ while ($true) {
         $newProcesses = $currentProcesses | Where-Object {$_ -notin $processes}
         $newProcesses | % {
                 $hash = (Get-FileHash -Path $_ -Algorithm MD5).Hash
+                if ($falsePositives.Contains($hash)) {
+                    return
+                }
                 $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash" -ErrorAction SilentlyContinue
                 if ($api.query_status -eq "ok") {
                     $signature = $api.signature
