@@ -4,7 +4,7 @@ Island is a small antivirus built with PowerShell. It uses the [URLHaus API](htt
 
 ## How to install
 
-Currently, the installation process is to go to the releases tab and download the EXE. Then run it. You may also want to disable Windows Defender.
+Currently, the installation process is to go to the releases tab and download the EXE. Then run it.
 
 ### Compile yourself
 

@@ -59,6 +59,10 @@ $scan = New-Object Windows.Forms.Button
 $scan.text = "Scan"
 $scan.Location = New-Object Drawing.Point(10, 40)
 $scan.Add_Click({
+    $Result = [System.Windows.MessageBox]::Show("Really perform this operation?","Confirm",4,32)
+    if ($Result -eq 7) {
+        return
+    }
     $folder = @((New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path, (New-Object -ComObject Shell.Application).NameSpace('shell:start menu').Self.Path, $env:TEMP)
     $items = Get-ChildItem $folder -Recurse -ErrorAction SilentlyContinue | Where { ! $_.PSIsContainer }
     $completed = 0
@@ -101,6 +105,10 @@ $scanfldr.Location = New-Object Drawing.Point(90, 40)
 $scanfldr.Add_Click({
     $folder = Get-Folder
     if ($folder -eq $null) {return}
+    $Result = [System.Windows.MessageBox]::Show("Really perform this operation?","Confirm",4,32)
+    if ($Result -eq 7) {
+        return
+    }
     $items = Get-ChildItem $folder -Recurse | Where { ! $_.PSIsContainer }
     $completed = 0
     $has_threat = $false

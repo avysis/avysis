@@ -14,7 +14,10 @@ while ($true) {
                 if ($falsePositives.Contains($hash)) {
                     return
                 }
-                $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash" -ErrorAction SilentlyContinue
+                $api = @{"query_status" = "island_error"}
+                try {
+                    $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
+                } catch {}
                 if ($api.query_status -eq "ok") {
                     $signature = $api.signature
                     if ($signature -eq $null) {$signature = "Malware"}
