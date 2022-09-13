@@ -1,6 +1,6 @@
-![](island.png) [beta]
+![](avysis.png) [beta]
 
-Island is a small antivirus built with PowerShell. It uses the [URLHaus API](https://urlhaus-api.abuse.ch/), which is really useful (doesn't use a key, no rate-limit). It's only recommended for systems that don't support Windows Defender (like the recent tiny10 builds).
+Avysis is a small antivirus built with PowerShell. It uses the [URLHaus API](https://urlhaus-api.abuse.ch/), which is really useful (doesn't use a key, no rate-limit). It's only recommended for systems that don't support Windows Defender (like the recent tiny10 builds).
 
 ## How to install
 
