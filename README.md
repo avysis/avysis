@@ -8,6 +8,12 @@ Currently, the installation process is to go to the releases tab and download th
 
 ### Compile yourself
 
+#### Quick compile
+You need ps2exe and Inno Setup (in path).
+```powershell
+git clone https://github.com/avysis/avysis.git; cd avysis; .\build
+```
+
 You need ps2exe and Inno Setup (in path). Then run build.cmd.
 
 #### Install
