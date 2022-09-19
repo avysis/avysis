@@ -169,7 +169,7 @@ $scanfile.Add_Click({
             if ($signature -eq $null) { $signature = "Malware" }
             $basename = $FileBrowser.SafeFileName
             $actualBasename = (Get-Item $FileBrowser.FileName).Basename
-            $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?", $_, 4, 48)
+            $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?", $FileBrowser.FileName, 4, 48)
             if ($msgbox -eq 6) {
                 get-process $actualBasename | stop-process
                 start-process powershell.exe -ArgumentList "del '$_' -Force" -Verb RunAs
