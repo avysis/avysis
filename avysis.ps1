@@ -2,6 +2,7 @@
 
 $protected = ! ! (Get-Process avysisbg -ErrorAction SilentlyContinue)
 $falsePositives = @("D41D8CD98F00B204E9800998ECF8427E")
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 function Truncate-Text([string]$Text, [int]$Length) {
     if ($Text.Length -gt $Length) {
@@ -75,7 +76,10 @@ $scan.Add_Click({
             }
             $api = @{"query_status" = "avysis_error" }
             try {
+                $oldpref = $ProgressPreference
+                $ProgressPreference = "SilentlyContinue"
                 $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
+                $ProgressPreference = $oldpref
             }
             catch {}
             if ($api.query_status -eq "ok") {
@@ -87,7 +91,7 @@ $scan.Add_Click({
                 $fullname = $_.FullName
                 $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?", $fullname, 4, 48)
                 if ($msgbox -eq 6) {
-                    start-process powershell.exe -ArgumentList "del '$fullname' -Force" -Verb RunAs
+                    start-process powershell.exe -ArgumentList "get-process $actualBasename | stop-process; del '$fullname' -Force" -Verb RunAs
                 }
             }
         }
@@ -124,7 +128,10 @@ $scanfldr.Add_Click({
             }
             $api = @{"query_status" = "avysis_error" }
             try {
+                $oldpref = $ProgressPreference
+                $ProgressPreference = "SilentlyContinue"
                 $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
+                $ProgressPreference = $oldpref
             }
             catch {}
             if ($api.query_status -eq "ok") {
@@ -161,7 +168,10 @@ $scanfile.Add_Click({
         }
         $api = @{"query_status" = "avysis_error" }
         try {
+            $oldpref = $ProgressPreference
+            $ProgressPreference = "SilentlyContinue"
             $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
+            $ProgressPreference = $oldpref
         }
         catch {}
         if ($api.query_status -eq "ok") {
@@ -169,10 +179,10 @@ $scanfile.Add_Click({
             if ($signature -eq $null) { $signature = "Malware" }
             $basename = $FileBrowser.SafeFileName
             $actualBasename = (Get-Item $FileBrowser.FileName).Basename
+            $filename = $FileBrowser.FileName
             $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?", $FileBrowser.FileName, 4, 48)
             if ($msgbox -eq 6) {
-                get-process $actualBasename | stop-process
-                start-process powershell.exe -ArgumentList "del '$_' -Force" -Verb RunAs
+                start-process powershell.exe -ArgumentList "get-process $actualBasename | stop-process; del '$filename' -Force" -Verb RunAs
             }
         }
         else {

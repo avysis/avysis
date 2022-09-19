@@ -1,6 +1,7 @@
 Add-Type -AssemblyName PresentationCore, PresentationFramework
 
 $falsePositives = @("D41D8CD98F00B204E9800998ECF8427E")
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $processes = Get-Process | Select-Object -ExpandProperty Path
 $pString = $processes | Out-String
@@ -16,7 +17,10 @@ while ($true) {
             }
             $api = @{"query_status" = "avysis_error" }
             try {
+                $oldpref = $ProgressPreference
+                $ProgressPreference = "SilentlyContinue"
                 $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
+                $ProgressPreference = $oldpref
             }
             catch {}
             if ($api.query_status -eq "ok") {
