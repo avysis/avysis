@@ -29,6 +29,68 @@ Function Get-Folder($initialDirectory = "") {
         return $null
     }
 }
+
+function Show-RemoveVirusDialog([array]$viruses) {
+    $global:viruses = $viruses
+    $virusdialog = New-Object Windows.Forms.Form
+    $virusdialog.Text = "Remove viruses"
+    $virusdialog.Width = "400"
+    $virusdialog.Height = "430"
+    $virusdialog.FormBorderStyle = 'Fixed3D'
+    $virusdialog.MaximizeBox = $false
+    $virusdialog.TopMost = $True
+    $virusdialog.ShowIcon = $false
+    $threatsfound = New-Object Windows.Forms.Label
+    $threatsfound.Text = "Viruses were found. You may want to remove all or some of these viruses."
+    $threatsfound.AutoSize = $True
+    $threatsfound.Location = New-Object Drawing.Point(10, 10)
+    $virusdialog.Controls.Add($threatsfound)
+    $virusselect = New-Object Windows.Forms.ListBox
+    $virusselect.Location = New-Object Drawing.Point(10, 30)
+    $virusselect.Width = "370"
+    $virusselect.Height = "320"
+    $global:viruses | % { $virusselect.Items.Add($_) } | out-null
+    $virusdialog.Controls.add($virusselect)
+    $delete = New-Object Windows.Forms.Button
+    $delete.Text = "Delete"
+    $delete.Location = New-Object Drawing.Point(10, 360)
+    $delete.Add_Click({
+            $item = $virusselect.SelectedItem
+            if (! $item) {
+                return
+            }
+            $actualBasename = (Get-Item $item).BaseName
+            $fullname = $item
+            start-process powershell.exe -ArgumentList "get-process $actualBasename | stop-process; del '$fullname' -Force" -Verb RunAs
+            $virusselect.items.Remove($item)
+            $newViruses = @()
+            foreach ($virus in $global:viruses) {
+                if ($virus -ne $item) {
+                    $newViruses += $virus
+                }
+            }
+            $global:viruses = $newViruses
+        })
+    $deleteAll = New-Object Windows.Forms.Button
+    $deleteAll.Text = "Delete all"
+    $deleteAll.Location = New-Object Drawing.Point(90, 360)
+    $deleteAll.Add_Click({
+            $command = ""
+            $global:viruses | % {
+                $item = $_
+                $actualBasename = (Get-Item $item).BaseName
+                $fullname = $item
+                $command += "; get-process $actualBasename | stop-process; del '$fullname' -Force"
+            }
+            start-process powershell.exe -ArgumentList $command -Verb RunAs
+            $virusselect.Items.Clear()
+            $virusdialog.close()
+        })
+    $virusdialog.Controls.add($delete)
+    $virusdialog.Controls.add($deleteAll)
+    $virusdialog.ShowDialog() | out-null
+}
+
 $form = New-Object Windows.Forms.Form
 $form.Text = "Avysis"
 $form.Width = "390"
@@ -58,9 +120,14 @@ $scan.Add_Click({
             return
         }
         $folder = @((New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path, (New-Object -ComObject Shell.Application).NameSpace('shell:start menu').Self.Path, $env:TEMP)
-        $items = Get-ChildItem $folder -Recurse -ErrorAction SilentlyContinue | Where { ! $_.PSIsContainer }
+        $items = Get-ChildItem $folder -Recurse -ErrorAction SilentlyContinue | Where { ! $_.PSIsContainer } | select-object -expandproperty fullname
+        $items = $items + (Get-Process | Select-Object -ExpandProperty Path | Sort-Object | Get-Unique)
+        $items = $items | % {
+            Get-Item $_
+        }
         $completed = 0
         $has_threat = $false
+        $viruses = @()
         $items | % {
             $completed += 1
             $percent = [Math]::Round(($completed / ($items | Measure-Object).count * 100))
@@ -83,21 +150,15 @@ $scan.Add_Click({
             }
             catch {}
             if ($api.query_status -eq "ok") {
-                $has_threat = $true
-                $signature = $api.signature
-                if ($signature -eq $null) { $signature = "Malware" }
-                $basename = (Get-Item $_.FullName).Name
-                $actualBasename = (Get-Item $_.FullName).Basename
-                $fullname = $_.FullName
-                $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?", $fullname, 4, 48)
-                if ($msgbox -eq 6) {
-                    start-process powershell.exe -ArgumentList "get-process $actualBasename | stop-process; del '$fullname' -Force" -Verb RunAs
-                }
+                $viruses += $_.FullName
             }
         }
         Write-Progress -Activity "Scan" -Status "Ready" -Completed
-        if (!($has_threat)) {
+        if ($viruses.Count -eq 0) {
             [System.Windows.MessageBox]::Show("No threats!", "No threats!", 0, 64)
+        }
+        else {
+            Show-RemoveVirusDialog -viruses $viruses
         }
     })
 $scanfldr = New-Object Windows.Forms.Button
@@ -112,7 +173,7 @@ $scanfldr.Add_Click({
         }
         $items = Get-ChildItem $folder -Recurse | Where { ! $_.PSIsContainer }
         $completed = 0
-        $has_threat = $false
+        $viruses = @()
         $items | % {
             $completed += 1
             $percent = [Math]::Round(($completed / ($items | Measure-Object).count * 100))
@@ -135,21 +196,15 @@ $scanfldr.Add_Click({
             }
             catch {}
             if ($api.query_status -eq "ok") {
-                $has_threat = $true
-                $signature = $api.signature
-                if ($signature -eq $null) { $signature = "Malware" }
-                $basename = (Get-Item $_.FullName).Name
-                $actualBasename = (Get-Item $_.FullName).Basename
-                $fullname = $_.FullName
-                $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?", $fullname, 4, 48)
-                if ($msgbox -eq 6) {
-                    start-process powershell.exe -ArgumentList "del '$fullname' -Force" -Verb RunAs
-                }
+                $viruses += $_.FullName
             }
         }
         Write-Progress -Activity "Scan a folder" -Status "Ready" -Completed
-        if (!($has_threat)) {
+        if ($viruses.Count -eq 0) {
             [System.Windows.MessageBox]::Show("No threats!", "No threats!", 0, 64)
+        }
+        else {
+            Show-RemoveVirusDialog -viruses $viruses
         }
     })
 $scanfile = New-Object Windows.Forms.Button
@@ -175,15 +230,7 @@ $scanfile.Add_Click({
         }
         catch {}
         if ($api.query_status -eq "ok") {
-            $signature = $api.signature
-            if ($signature -eq $null) { $signature = "Malware" }
-            $basename = $FileBrowser.SafeFileName
-            $actualBasename = (Get-Item $FileBrowser.FileName).Basename
-            $filename = $FileBrowser.FileName
-            $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?", $FileBrowser.FileName, 4, 48)
-            if ($msgbox -eq 6) {
-                start-process powershell.exe -ArgumentList "get-process $actualBasename | stop-process; del '$filename' -Force" -Verb RunAs
-            }
+            Show-RemoveVirusDialog -viruses @($FileBrowser.FileName)
         }
         else {
             [System.Windows.MessageBox]::Show("No threats!", "No threats!", 0, 64)
