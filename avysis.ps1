@@ -1,7 +1,33 @@
 ﻿Add-Type -AssemblyName System.Windows.Forms, PresentationCore, PresentationFramework
 
-$protected = ! ! (Get-Process avysisbg -ErrorAction SilentlyContinue)
+function Test-RegistryValue {
+
+    param (
+    
+        [parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]$Path,
+    
+        [parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]$Value
+    )
+    
+    try {
+    
+        Get-ItemProperty -Path $Path | Select-Object -ExpandProperty $Value -ErrorAction Stop | Out-Null
+        return $true
+    }
+    
+    catch {
+    
+        return $false
+    
+    }
+    
+}
+
+$protected = (Test-RegistryValue -Path "HKLM:\SOFTWARE\Avysis" -Value "Unprotected")
 $falsePositives = @("D41D8CD98F00B204E9800998ECF8427E")
+[Net.ServicePointManager]::MaxServicePointIdleTime = 3000
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 function Truncate-Text([string]$Text, [int]$Length) {
@@ -236,15 +262,15 @@ $scanfile.Add_Click({
             [System.Windows.MessageBox]::Show("No threats!", "No threats!", 0, 64)
         }
     })
-$tempdisable = New-Object Windows.Forms.Button
-$tempdisable.text = "Disable temporarily"
-$tempdisable.Location = New-Object Drawing.Point(250, 40)
-$tempdisable.Width = 120
-$tempdisable.Add_Click({
-        Get-Process avysisbg | Stop-Process
+$disable = New-Object Windows.Forms.Button
+$disable.text = "Disable"
+$disable.Location = New-Object Drawing.Point(250, 40)
+$disable.Add_Click({
+        reg.exe add HKCR\exefile\shell\open\command /ve /d "`"%0`" %*" /f | Out-Null
+        reg.exe add HKLM\Software\Avysis /v Unprotected | Out-Null
         $prtext.Text = "You're not protected"
         $prtext.ForeColor = "red"
-        $form.controls.remove($tempdisable)
+        $form.controls.remove($disable)
         $form.controls.add($reenable)
         $form.Width = "345"
     })
@@ -252,11 +278,12 @@ $reenable = New-Object Windows.Forms.Button
 $reenable.text = "Re-enable"
 $reenable.Location = New-Object Drawing.Point(250, 40)
 $reenable.Add_Click({
-        $bgprocess = (Get-ItemProperty Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run).Avysis
-        Start-Process -FilePath $bgprocess
+        $installPath = (Get-ItemProperty HKLM:\Software\Avysis -Name "InstallPath").InstallPath
+        reg.exe add HKCR\exefile\shell\open\command /ve /d "$installPath\avysismitm.exe `"%1`" %*" /f | Out-Null
+        reg.exe delete HKLM\Software\Avysis /v Unprotected /f | Out-Null
         $prtext.Text = "You're protected"
         $prtext.ForeColor = "green"
-        $form.controls.add($tempdisable)
+        $form.controls.add($disable)
         $form.controls.remove($reenable)
         $form.Width = "390"
     })
@@ -264,9 +291,9 @@ $form.controls.add($prtext)
 $form.controls.add($scan)
 $form.controls.add($scanfldr)
 $form.controls.add($scanfile)
-$form.controls.add($tempdisable)
+$form.controls.add($disable)
 if (! $protected) {
-    $form.controls.remove($tempdisable)
+    $form.controls.remove($disable)
     $form.controls.add($reenable)
     $form.Width = "345"
 }
