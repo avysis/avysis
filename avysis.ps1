@@ -4,13 +4,14 @@ $protected = ! ! (Get-Process avysisbg -ErrorAction SilentlyContinue)
 $falsePositives = @("D41D8CD98F00B204E9800998ECF8427E")
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-function Truncate-Text([string]$Text, [int]$Length) {
-    if ($Text.Length -gt $Length) {
-        return ($Text.Substring(0, $Length) + "...")
-    }
-    else {
-        return $Text
-    }
+function Wait-UntilNoErrors($scriptblock) {
+    do {
+        try {
+            $scriptblock.invoke()
+            return
+        }
+        catch {}
+    } while ($true)
 }
 
 Function Get-Folder($initialDirectory = "") {
@@ -49,7 +50,8 @@ function Show-RemoveVirusDialog([array]$viruses) {
     $virusselect.Location = New-Object Drawing.Point(10, 30)
     $virusselect.Width = "370"
     $virusselect.Height = "320"
-    $global:viruses | % { $virusselect.Items.Add($_) } | out-null
+    $virusselect.HorizontalScrollbar = $true
+    $global:viruses | ForEach-Object { $virusselect.Items.Add($_) } | out-null
     $virusdialog.Controls.add($virusselect)
     $delete = New-Object Windows.Forms.Button
     $delete.Text = "Delete"
@@ -76,7 +78,7 @@ function Show-RemoveVirusDialog([array]$viruses) {
     $deleteAll.Location = New-Object Drawing.Point(90, 360)
     $deleteAll.Add_Click({
             $command = ""
-            $global:viruses | % {
+            $global:viruses | ForEach-Object {
                 $item = $_
                 $actualBasename = (Get-Item $item).BaseName
                 $fullname = $item
@@ -120,36 +122,29 @@ $scan.Add_Click({
             return
         }
         $folder = @((New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path, (New-Object -ComObject Shell.Application).NameSpace('shell:start menu').Self.Path, $env:TEMP)
-        $items = Get-ChildItem $folder -Recurse -ErrorAction SilentlyContinue | Where { ! $_.PSIsContainer } | select-object -expandproperty fullname
+        $items = Get-ChildItem $folder -Recurse -ErrorAction SilentlyContinue | Where-Object { ! $_.PSIsContainer } | select-object -expandproperty fullname
         $items = $items + (Get-Process | Select-Object -ExpandProperty Path | Sort-Object | Get-Unique)
-        $items = $items | % {
+        $items = $items | ForEach-Object {
             Get-Item $_
         }
         $completed = 0
-        $has_threat = $false
         $viruses = @()
-        $items | % {
+        $items | ForEach-Object {
             $completed += 1
             $percent = [Math]::Round(($completed / ($items | Measure-Object).count * 100))
-            $name = $_.Name
-            $truncatedName = Truncate-Text -Text $name -Length 12
-            if (! $truncatedName.EndsWith("...")) {
-                $truncatedName += "."
-            }
-            Write-Progress -Activity "Scan" -Status "Avysis is scanning your computer. This may take a while. Scanning file $truncatedName $percent% complete." -PercentComplete $percent
-            $hash = (Get-FileHash -Path $_.FullName -Algorithm MD5 -ErrorAction SilentlyContinue).Hash
+            Write-Progress -Activity "Scan" -Status "Avysis is scanning your computer. This may take a while. $percent% complete." -PercentComplete $percent
+            $hash = (Get-FileHash -Path $_.FullName -Algorithm SHA1 -ErrorAction SilentlyContinue).Hash
             if ($falsePositives.Contains($hash)) {
                 return
             }
-            $api = @{"query_status" = "avysis_error" }
-            try {
+            $global:api = @{"query_status" = "avysis_error" }
+            Wait-UntilNoErrors -scriptblock {
                 $oldpref = $ProgressPreference
                 $ProgressPreference = "SilentlyContinue"
-                $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
+                $global:api = Invoke-RestMethod "https://mb-api.abuse.ch/api/v1/" -Method Post -Body "query=get_info&hash=$hash"
                 $ProgressPreference = $oldpref
             }
-            catch {}
-            if ($api.query_status -eq "ok") {
+            if ($global:api.query_status -eq "ok") {
                 $viruses += $_.FullName
             }
         }
@@ -171,31 +166,25 @@ $scanfldr.Add_Click({
         if ($Result -eq 7) {
             return
         }
-        $items = Get-ChildItem $folder -Recurse | Where { ! $_.PSIsContainer }
+        $items = Get-ChildItem $folder -Recurse | Where-Object { ! $_.PSIsContainer }
         $completed = 0
         $viruses = @()
-        $items | % {
+        $items | ForEach-Object {
             $completed += 1
             $percent = [Math]::Round(($completed / ($items | Measure-Object).count * 100))
-            $name = $_.Name
-            $truncatedName = Truncate-Text -Text $name -Length 12
-            if (! $truncatedName.EndsWith("...")) {
-                $truncatedName += "."
-            }
-            Write-Progress -Activity "Scan a folder" -Status "Avysis is scanning a folder. This may take a while. Scanning file $truncatedName $percent% complete." -PercentComplete $percent
-            $hash = (Get-FileHash -Path $_.FullName -Algorithm MD5 -ErrorAction SilentlyContinue).Hash
+            Write-Progress -Activity "Scan a folder" -Status "Avysis is scanning a folder. This may take a while. $percent% complete." -PercentComplete $percent
+            $hash = (Get-FileHash -Path $_.FullName -Algorithm SHA1 -ErrorAction SilentlyContinue).Hash
             if ($falsePositives.Contains($hash)) {
                 return
             }
-            $api = @{"query_status" = "avysis_error" }
-            try {
+            $global:api = @{"query_status" = "avysis_error" }
+            Wait-UntilNoErrors -scriptblock {
                 $oldpref = $ProgressPreference
                 $ProgressPreference = "SilentlyContinue"
-                $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
+                $global:api = Invoke-RestMethod "https://mb-api.abuse.ch/api/v1/" -Method Post -Body "query=get_info&hash=$hash"
                 $ProgressPreference = $oldpref
             }
-            catch {}
-            if ($api.query_status -eq "ok") {
+            if ($global:api.query_status -eq "ok") {
                 $viruses += $_.FullName
             }
         }
@@ -217,19 +206,18 @@ $scanfile.Add_Click({
         }
         $null = $FileBrowser.ShowDialog()
         if (!($FileBrowser.FileName)) { return }
-        $hash = (Get-FileHash -Path $FileBrowser.FileName -Algorithm MD5 -ErrorAction SilentlyContinue).Hash
+        $hash = (Get-FileHash -Path $FileBrowser.FileName -Algorithm SHA1 -ErrorAction SilentlyContinue).Hash
         if ($falsePositives.Contains($hash)) {
             return
         }
-        $api = @{"query_status" = "avysis_error" }
-        try {
+        $global:api = @{"query_status" = "avysis_error" }
+        Wait-UntilNoErrors -scriptblock {
             $oldpref = $ProgressPreference
             $ProgressPreference = "SilentlyContinue"
-            $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
+            $global:api = Invoke-RestMethod "https://mb-api.abuse.ch/api/v1/" -Method Post -Body "query=get_info&hash=$hash"
             $ProgressPreference = $oldpref
         }
-        catch {}
-        if ($api.query_status -eq "ok") {
+        if ($global:api.query_status -eq "ok") {
             Show-RemoveVirusDialog -viruses @($FileBrowser.FileName)
         }
         else {

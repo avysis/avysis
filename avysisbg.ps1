@@ -10,7 +10,7 @@ while ($true) {
     $cpString = $currentProcesses | Out-String
     if ($pString -ne $cpString) {
         $newProcesses = $currentProcesses | Where-Object { $_ -notin $processes }
-        $newProcesses | % {
+        $newProcesses | ForEach-Object {
             $hash = (Get-FileHash -Path $_ -Algorithm MD5 -ErrorAction SilentlyContinue).Hash
             if ($falsePositives.Contains($hash)) {
                 return
@@ -19,19 +19,14 @@ while ($true) {
             try {
                 $oldpref = $ProgressPreference
                 $ProgressPreference = "SilentlyContinue"
-                $api = Invoke-RestMethod "https://urlhaus-api.abuse.ch/v1/payload/" -Method Post -Body "md5_hash=$hash"
+                $api = Invoke-RestMethod "https://mb-api.abuse.ch/api/v1/" -Method Post -Body "query=get_info&hash=$hash"
                 $ProgressPreference = $oldpref
             }
             catch {}
             if ($api.query_status -eq "ok") {
-                $signature = $api.signature
-                if ($signature -eq $null) { $signature = "Malware" }
-                $basename = (Get-Item $_).Name
-                $actualBasename = (Get-Item $_).Basename
-                $msgbox = [System.Windows.MessageBox]::Show("$basename is infected with $signature. Would you like to remove it from your computer?", $_, 4, 48)
-                if ($msgbox -eq 6) {
-                    start-process powershell.exe -ArgumentList "get-process $actualBasename | stop-process; del '$_' -Force" -Verb RunAs
-                }
+                $basename = (Get-Item $_).BaseName
+                get-process $basename | stop-process
+                [System.Windows.MessageBox]::Show("We blocked a file containing malware.", "Blocked file", 0, 64)
             } 
         }
         $pString = $cpString
